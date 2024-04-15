@@ -5,7 +5,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from core.tesks import delete_expired_2fa_code, send_confirmation_email
+from core.tasks import delete_expired_2fa_code, send_confirmation_email
 from custom_auth.api.serializers import LoginSerializer, TokenSerializer
 from users.models import User
 
