@@ -1,0 +1,550 @@
+openapi: 3.0.2
+info:
+  title: 'Otomari Auth API'
+  contact:
+     email: webmaster@otomari.ru
+  version: 0.0.1
+  description: |
+    API requests start with `/api/v1/`
+    # Description
+    **Otomari Auth** can register a user and allows them to edit their profile.
+    # User Registration Algorithm
+    1. The user sends a POST request to add a new user with parameters email and password to the endpoint /api/v1/users/.
+    2. The user sends a POST request to log in with parameters email and password to the endpoint /api/v1/login/.
+    3. **Otomari Auth** оsends an email with a confirmation code (confirmation_code) to the email address.
+    4. The user sends a POST request with parameters email and confirmation_code to the endpoint /api/v1/login/2fa/, receiving a token (JWT token) in response.
+    5. If desired, the user sends a PATCH request to the endpoint /api/v1/users/me/ and fills in the fields in their profile (field descriptions are in the documentation).
+    # User Roles
+    - **Anonymous**  — can register.
+    - **Authenticated User** (`user`) — Can modify and delete their profile. This role is assigned by default to every new user.
+    - **Administrator** (`admin`) — Can view the list of users, modify, and delete other user's profiles. Can assign roles to users through the admin panel.
+    - **Django Superuser** — has administrator rights (`admin`).
+servers:
+  - url: https://auth.otomari.ru/api/v1
+tags:
+  - name: users
+    description: User creation and management
+  - name: login
+    description: Operations with 2fa login
+paths:
+  /users/:
+    get:
+      operationId: List of Users
+      description: 'Get users list. Available only for admin.'
+      parameters: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CustomUser'
+          description: 'Successful response with list of users'
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Eror401'
+          description: 'Authentication credentials were not provided'
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Eror403'
+          description: 'You do not have permission to perform this action'
+      security:
+      - jwt-token:
+        - read:admin
+      tags:
+      - users
+    post:
+      operationId: Create User
+      description: 'Create user. Available to everybody.'
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomCreateUser'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomCreateUser'
+          description: 'User profile successfully created'
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Eror400'
+          description: 'Required field missing or incorrect'
+      tags:
+      - users
+  /users/me/:
+    get:
+      operationId: Get User data
+      description: 'Profile owner can get user data. Available to authorized user.'
+      parameters: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomUser'
+          description: 'Success'
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Eror401'
+          description: 'Authentication credentials were not provided'
+      security:
+      - jwt-token:
+        - read:admin,user
+      tags:
+      - users
+    put:
+      operationId: Replace User data
+      description: 'Replace resource entirely. Available to authorized user.'
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomUser'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomUser'
+          description: 'Replaced saccessfully'
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Eror401'
+          description: 'Authentication credentials were not provided'
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Eror400'
+          description: 'Required field missing or incorrect'
+      security:
+      - jwt-token:
+        - write:admin,user
+      tags:
+      - users
+    patch:
+      operationId: Partially update User data
+      description: 'Partially update resource. Available to authorized user.'
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomUser'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomUser'
+          description: 'Updated saccessfully'
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Eror401'
+          description: 'Authentication credentials were not provided'
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Eror400'
+          description: 'Required field missing or incorrect'
+      security:
+      - jwt-token:
+        - write:admin,user
+      tags:
+      - users
+    delete:
+      operationId: Delete User profile
+      description: 'Delete profile. Available to authorized user.'
+      parameters: []
+      requestBody:
+        content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DelUser'
+      responses:
+        '204':
+          description: 'Deleted successlully'
+      security:
+      - jwt-token:
+        - write:admin,user
+      tags:
+      - users
+  /users/{id}/:
+    get:
+      operationId: Get User data
+      description: 'Get User profile data. Available to authorized Admin and authorized User only by his own id.'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: A unique integer value identifying this User.
+        schema:
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomUser'
+          description: 'Success'
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Eror403'
+          description: 'You do not have permission to perform this action'
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Eror404'
+          description: 'User not found'
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Eror401'
+          description: 'Authentication credentials were not provided'
+      security:
+      - jwt-token:
+        - read:admin
+      tags:
+      - users
+    put:
+      operationId: Replace User data
+      description: 'Replace resource entirely. Available to authorized Admin and authorized User only by his own id.'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: A unique integer value identifying this User.
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomUser'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomUser'
+          description: 'Replaced saccessfully'
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Eror403'
+          description: 'You do not have permission to perform this action'
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Eror404'
+          description: 'User not found'
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Eror401'
+          description: 'Authentication credentials were not provided'
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Eror400'
+          description: 'Required field missing or incorrect'
+      security:
+      - jwt-token:
+        - write:admin
+      tags:
+      - users
+    patch:
+      operationId: Partially update User data
+      description: 'Partially update resource. Available for Admin.'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: A unique integer value identifying this User Available to authorized Admin and authorized User only by his own id..
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomUser'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomUser'
+          description: 'Updated saccessfully'
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Eror403'
+          description: 'You do not have permission to perform this action'
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Eror404'
+          description: 'User not found'
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Eror401'
+          description: 'Authentication credentials were not provided'
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Eror400'
+          description: 'Required field missing or incorrect'
+      security:
+      - jwt-token:
+        - write:admin
+      tags:
+      - users
+    delete:
+      operationId: Delete User profile
+      description: 'Delete User profile. Available for Admin.'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: A unique integer value identifying this User.
+        schema:
+          type: string
+      requestBody:
+        content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DelUser'
+      responses:
+        '204':
+          description: 'Deleted Successfuly'
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Eror403'
+          description: 'You do not have permission to perform this action'
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Eror404'
+          description: 'User not found'
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Eror401'
+          description: 'Authentication credentials were not provided'
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Eror400'
+          description: 'Required field missing or incorrect'
+      security:
+      - jwt-token:
+        - write:admin
+      tags:
+      - users
+  /login/:
+    post:
+      operationId: Login
+      description: 'Send confirmation code to User`s email.'
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Login'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponce'
+          description: 'Confirmation code has been sent to your email successfully'
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Eror400'
+          description: 'Required field missing or incorrect'
+      tags:
+      - login
+  /login/2fa/:
+    post:
+      operationId: Create JWT token
+      description: 'Create JWT token.'
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Token'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponce'
+          description: 'JWT token created successfully'
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Eror400'
+          description: 'Required field missing or incorrect'
+      tags:
+      - login
+components:
+  schemas:
+    CustomUser:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        first_name:
+          type: string
+          maxLength: 20
+        last_name:
+          type: string
+          maxLength: 20
+      required:
+      - email
+    Login:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+      required:
+      - email
+      - password
+    LoginResponce:
+      type: object
+      properties:
+        email: 
+          type: string
+          format: email
+        detail: 
+          type: string
+          example: Confirmation code has been sent to your email
+    Token:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        confirmation_code:
+          type: string
+      required:
+      - email
+      - confirmation_code
+    TokenResponce:
+      type: object
+      properties:
+        token:
+          type: string
+    CustomCreateUser:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        first_name:
+          type: string
+          maxLength: 20
+        last_name:
+          type: string
+          maxLength: 20
+        password:
+          type: string
+          writeOnly: true
+      required:
+      - email
+      - password
+    DelUser:
+      type: object
+      properties:
+        current_password:
+          type: string
+    Eror401:
+      type: object
+      properties:
+        detail:
+          type: string
+      required:
+      - detail
+    Eror403:
+      type: object
+      properties:
+        detail:
+          type: string
+          example: You do not have permission to perform this action.
+      required:
+      - detail
+    Eror400:
+      title: Bad request
+      type: object
+      properties:
+        field_name:
+          type: array
+          items:
+            type: string
+    Eror404:
+      type: object
+      properties:
+        detail:
+          type: string
+          example: No User matches the given query.
+      required:
+      - detail
+  securitySchemes:
+    jwt-token:
+      type: apiKey
+      description: Authentication is performed using JWT tokens
+      name: Bearer
+      in: header
