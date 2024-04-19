@@ -37,8 +37,13 @@ their accounts.
 2. **Environment Setup:** In the root of the project, create a .env file. You can use
 the provided .env.example file as a template. Make sure to fill in the
 necessary environment variables with your configuration.
-3. **Docker Compose:** Navigate to the project directory and run docker-compose up to
-launch the application using Docker Compose.
+3. **Docker Compose:** Navigate to the project directory and run below commands to launch the application using Docker Compose.
+
+```bash
+docker compose build
+docker compose up
+```
+
 4. **Accessing the Application:** Once Docker Compose has finished setting up the
 environment, you can access the application by visiting http://localhost/api/v1/
 
